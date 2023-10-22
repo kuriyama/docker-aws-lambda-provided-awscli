@@ -1,0 +1,33 @@
+name: Build Docker image and push to ghcr.io
+
+on:
+  push:
+    branches: main
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      -
+        name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Docker image
+        run: |
+          t=ghcr.io/$GITHUB_REPOSITORY
+          date=`date +%Y%m%d`
+          for ver in al2; do
+              mkdir -p work
+              sed -e "s|%%VER%%|$ver|" Dockerfile.tmpl > work/Dockerfile
+              (cd work; docker build --tag $t:$ver --tag $t:$ver-$date .)
+          done
+      - name: Push Docker image
+        run: |
+          for ver in al2; do
+              docker push ghcr.io/$GITHUB_REPOSITORY:$ver
+              docker push ghcr.io/$GITHUB_REPOSITORY:$ver-`date +%Y%m%d`
+          done
